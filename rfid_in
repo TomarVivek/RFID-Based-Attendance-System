@@ -6,14 +6,14 @@
 constexpr uint8_t RST_PIN = 5;     // Configurable, see typical pin layout above
 constexpr uint8_t SS_PIN = 4;     // Configurable, see typical pin layout above
 char Buf[50];
-const char *WIFI_SSID = "VIVEK-LAB";
-const char *WIFI_PASSWORD = "driEV335";
+const char *WIFI_SSID = "wifi name";
+const char *WIFI_PASSWORD = "wifi password";
 
-const char *MQTT_HOST = "14.139.221.186";
-const int MQTT_PORT = 61616;
+const char *MQTT_HOST = "host ip address";
+const int MQTT_PORT = port no.;
 const char *MQTT_CLIENT_ID = "ESP8266 NodeMCU";
-const char *MQTT_USER = "iotp";
-const char *MQTT_PASSWORD = "iotlab@iot@Producer";
+const char *MQTT_USER = "user id";
+const char *MQTT_PASSWORD = "user pswd";
 const char *TOPIC = "IOT.RFID.IN";
 
 int StatusLED = D0;

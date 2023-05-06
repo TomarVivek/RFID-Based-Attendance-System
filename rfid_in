@@ -1,0 +1,113 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <SPI.h>
+#include <MFRC522.h>
+
+constexpr uint8_t RST_PIN = 5;     // Configurable, see typical pin layout above
+constexpr uint8_t SS_PIN = 4;     // Configurable, see typical pin layout above
+char Buf[50];
+const char *WIFI_SSID = "VIVEK-LAB";
+const char *WIFI_PASSWORD = "driEV335";
+
+const char *MQTT_HOST = "14.139.221.186";
+const int MQTT_PORT = 61616;
+const char *MQTT_CLIENT_ID = "ESP8266 NodeMCU";
+const char *MQTT_USER = "iotp";
+const char *MQTT_PASSWORD = "iotlab@iot@Producer";
+const char *TOPIC = "IOT.RFID.IN";
+
+int StatusLED = D0;
+int DataLED = D8;
+
+WiFiClient client;
+PubSubClient mqttClient(client);
+
+MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
+
+String data = "";
+void setup() { 
+  Serial.begin(115200);
+  SPI.begin(); // Init SPI bus
+  rfid.PCD_Init(); // Init MFRC522 
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  wifi_connect();
+  mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  mqtt_connect();
+
+
+  pinMode(StatusLED, OUTPUT);
+  digitalWrite(StatusLED, LOW);
+
+  pinMode(DataLED, OUTPUT);
+  digitalWrite(DataLED, LOW);
+
+  
+}
+ 
+void loop() {
+
+  if(!WiFi.isConnected()){
+      wifi_connect();
+    }
+    if(!mqttClient.connected()){
+      mqtt_connect();
+    }
+
+  // Look for new cards
+  if ( ! rfid.PICC_IsNewCardPresent())
+    return;
+
+  // Verify if the NUID has been readed
+  if ( ! rfid.PICC_ReadCardSerial())
+    return;
+   
+  data="";
+  data=printHex(rfid.uid.uidByte, rfid.uid.size);
+  Serial.println(data);
+  
+  data.toCharArray(Buf, data.length()+1);
+  digitalWrite(DataLED, HIGH);
+  mqttClient.publish(TOPIC, Buf);
+  delay(750);
+  digitalWrite(DataLED, LOW);
+  // Halt PICC
+  rfid.PICC_HaltA();
+
+  // Stop encryption on PCD
+  rfid.PCD_StopCrypto1();
+}
+
+
+String printHex(byte *buffer, byte bufferSize) {
+  String str = "";
+  for (uint8_t i = 0; i < bufferSize; i++)
+  {
+      str += String(buffer[i]);
+  }
+  return "{\"UID\":\""+str+"\"}";
+}
+
+void wifi_connect(){
+  while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+  Serial.println("Connected to Wi-Fi");
+}
+
+void mqtt_connect(){
+  while (!mqttClient.connected()) {
+    
+        if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD )) {
+          digitalWrite(StatusLED, HIGH);
+          Serial.println("Connected to MQTT broker");
+        } else {
+          digitalWrite(StatusLED, HIGH);
+            delay(500);
+            Serial.print(".");
+            digitalWrite(StatusLED, LOW);
+        }
+    }
+}
